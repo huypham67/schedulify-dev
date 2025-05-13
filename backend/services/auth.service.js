@@ -259,3 +259,78 @@ exports.logoutUser = async (userId, refreshToken) => {
     throw error;
   }
 };
+
+/**
+ * Update user profile
+ * @param {string} userId - User ID
+ * @param {Object} profileData - Updated profile data
+ * @param {string} profileData.firstName - User first name
+ * @param {string} profileData.lastName - User last name
+ * @returns {Promise<Object>} Updated user object
+ * @throws {Error} If database operation fails
+ */
+exports.updateUserProfile = async (userId, profileData) => {
+  try {
+    // Find and update user
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    // Update fields
+    if (profileData.firstName) user.firstName = profileData.firstName;
+    if (profileData.lastName) user.lastName = profileData.lastName;
+    
+    await user.save();
+    
+    return user;
+  } catch (error) {
+    logger.error(`Error updating user profile: ${error.message}`);
+    throw error;
+  }
+};
+
+/**
+ * Change user password
+ * @param {string} userId - User ID
+ * @param {string} currentPassword - Current password
+ * @param {string} newPassword - New password
+ * @returns {Promise<boolean>} True if successful
+ * @throws {Error} If passwords don't match or database operation fails
+ */
+exports.changeUserPassword = async (userId, currentPassword, newPassword) => {
+  try {
+    // Find user
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    // Verify current password
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      throw new Error('Current password is incorrect');
+    }
+    
+    // Check if new password is different from current
+    const isSamePassword = await user.comparePassword(newPassword);
+    if (isSamePassword) {
+      throw new Error('New password must be different from current password');
+    }
+    
+    // Update password
+    user.password = newPassword;
+    await user.save();
+    
+    // Invalidate all refresh tokens
+    user.refreshTokens = [];
+    await user.save();
+    
+    return true;
+  } catch (error) {
+    logger.error(`Error changing user password: ${error.message}`);
+    throw error;
+  }
+};

@@ -465,4 +465,189 @@ newman run Schedulify.postman_collection.json -e Schedulify.postman_environment.
 
 ## Contact
 
+If you encounter persistent issues, please contact the development team or open an issue on GitHub.
+
+## Testing OAuth Authentication with Postman
+
+Testing OAuth authentication flows (Google/Facebook) with Postman requires a special approach because OAuth involves browser redirects that Postman cannot automatically follow. Here's how to test these flows:
+
+### Prerequisites
+
+1. Ensure your development environment is configured with proper OAuth credentials:
+   - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` for Google OAuth
+   - `FACEBOOK_APP_ID` and `FACEBOOK_APP_SECRET` for Facebook OAuth
+   - Proper redirect URIs configured in your Google/Facebook developer console
+
+2. Create the following variables in your Postman environment:
+   - `base_url`: `http://localhost:5000` (or your server URL)
+   - `access_token`: (will be extracted manually)
+   - `refresh_token`: (will be extracted manually)
+
+### Testing OAuth Configuration Status
+
+First, check if OAuth is properly configured on your server:
+
+1. Create a new request:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/auth/oauth-status`
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "oauthProviders": {
+       "google": true,
+       "facebook": true
+     }
+   }
+   ```
+4. If either value is `false`, check your server's `.env` file for the required credentials.
+
+### Testing Google OAuth
+
+#### Step 1: Generate OAuth URL
+
+1. Create a new request to check the Google OAuth endpoint:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/auth/google`
+   - DO NOT send the request (it would redirect to Google login page)
+
+#### Step 2: Copy the URL to Browser
+
+1. Right-click the URL in Postman and copy it
+2. Open a new browser window in incognito/private mode
+3. Paste the URL in the browser address bar and navigate to it
+4. You should be redirected to Google's authentication page
+5. Complete the Google login process
+
+#### Step 3: Extract Tokens from Callback URL
+
+1. After successful Google authentication, you'll be redirected to a URL like:
+   ```
+   http://localhost:3000/oauth-callback?accessToken=eyJhbGciOiJIUzI1NiIsInR5...&refreshToken=eyJhbGciOiJIUzI1NiIs...
+   ```
+
+2. Copy the entire callback URL from your browser
+3. Extract the `accessToken` and `refreshToken` query parameters
+4. In Postman, set these as your environment variables:
+   - Click on the "Environment" dropdown (top right)
+   - Select "Edit" on your environment
+   - Update the `access_token` variable with the extracted access token
+   - Update the `refresh_token` variable with the extracted refresh token
+   - Save the environment
+
+#### Step 4: Verify Authentication with the Extracted Token
+
+1. Create a new request:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/auth/me`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "user": {
+       "id": "...",
+       "email": "your.google.email@gmail.com",
+       "firstName": "YourFirstName",
+       "lastName": "YourLastName",
+       "profileImage": "https://...",
+       "isVerified": true,
+       "authType": "google"
+     }
+   }
+   ```
+
+### Testing Facebook OAuth
+
+#### Step 1: Generate OAuth URL
+
+1. Create a new request to check the Facebook OAuth endpoint:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/auth/facebook`
+   - DO NOT send the request (it would redirect to Facebook login page)
+
+#### Step 2: Copy the URL to Browser
+
+1. Right-click the URL in Postman and copy it
+2. Open a new browser window in incognito/private mode
+3. Paste the URL in the browser address bar and navigate to it
+4. You should be redirected to Facebook's authentication page
+5. Complete the Facebook login process
+
+#### Step 3: Extract Tokens from Callback URL
+
+1. After successful Facebook authentication, you'll be redirected to a URL like:
+   ```
+   http://localhost:3000/oauth-callback?accessToken=eyJhbGciOiJIUzI1NiIsInR5...&refreshToken=eyJhbGciOiJIUzI1NiIs...
+   ```
+
+2. Copy the entire callback URL from your browser
+3. Extract the `accessToken` and `refreshToken` query parameters
+4. In Postman, set these as your environment variables:
+   - Click on the "Environment" dropdown (top right)
+   - Select "Edit" on your environment
+   - Update the `access_token` variable with the extracted access token
+   - Update the `refresh_token` variable with the extracted refresh token
+   - Save the environment
+
+#### Step 4: Verify Authentication with the Extracted Token
+
+1. Create a new request:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/auth/me`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "user": {
+       "id": "...",
+       "email": "your.facebook.email@example.com",
+       "firstName": "YourFirstName",
+       "lastName": "YourLastName",
+       "profileImage": "https://...",
+       "isVerified": true,
+       "authType": "facebook"
+     }
+   }
+   ```
+
+### Troubleshooting OAuth Testing
+
+- **Invalid Callback Error**: Verify that the redirect URIs in your Google/Facebook developer console match what's configured in your server
+- **Authentication Failed**: Check server logs for more detailed error messages
+- **Token Extraction Problems**:
+  - Ensure you're copying the full callback URL from the browser
+  - Check if the server is properly generating tokens in the OAuth callback
+  - If the URL doesn't contain tokens, check your server logs for errors in the OAuth callback
+
+### Testing OAuth Error Scenarios
+
+#### Test Case 1: Invalid OAuth Configuration
+
+1. Temporarily remove or modify the Google/Facebook credentials in your `.env` file
+2. Make a request to `/api/auth/oauth-status` and verify that the provider status shows `false`
+3. Restore your credentials when testing is complete
+
+#### Test Case 2: OAuth Provider Unavailable
+
+1. Create a request to a misspelled or non-existent OAuth endpoint:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/auth/googlee` (notice the extra 'e')
+2. Send the request
+3. Expected response: 404 Not Found
+
+## Automated OAuth Testing Considerations
+
+While direct OAuth flows are difficult to automate in Postman, you can:
+
+1. Mock the OAuth callback by creating a direct request to your callback handling endpoint (requires backend modification for testing)
+2. Use Postman's test scripts to extract and validate tokens that are manually acquired
+3. Set up monitors that test the OAuth configuration status endpoint automatically
+
 If you encounter persistent issues, please contact the development team or open an issue on GitHub. 

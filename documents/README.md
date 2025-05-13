@@ -45,4 +45,15 @@ Schedulify helps users:
 - ✅ Post scheduling and publishing
 - ✅ Publication status tracking
 
-Refer to the specific documentation files for detailed implementation information. 
+Refer to the specific documentation files for detailed implementation information.
+
+## Documentation
+
+- [BUSINESS-REQUIREMENTS.md](./BUSINESS-REQUIREMENTS.md) - Business requirements and feature specifications
+- [PROJECT-STRUCTURE.md](./PROJECT-STRUCTURE.md) - Detailed project structure and architecture
+- [API-ENDPOINTS.md](./API-ENDPOINTS.md) - API documentation and examples
+- [AUTH-IMPLEMENTATION.md](./AUTH-IMPLEMENTATION.md) - Authentication system implementation details
+- [OAUTH-GUIDE.md](./OAUTH-GUIDE.md) - Comprehensive guide for OAuth setup and testing
+- [FRONTEND-ROADMAP.md](./FRONTEND-ROADMAP.md) - Frontend development roadmap
+- [MVP-ROADMAP.md](./MVP-ROADMAP.md) - Minimum Viable Product implementation plan
+- [TESTING-GUIDE.md](./TESTING-GUIDE.md) - Testing procedures and guidelines 

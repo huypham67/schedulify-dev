@@ -25,6 +25,7 @@ Authorization: Bearer <access_token>
 | POST | `/api/auth/logout` | Logout user | Yes |
 | POST | `/api/auth/refresh` | Refresh access token | No |
 | GET | `/api/auth/me` | Get current user | Yes |
+| PUT | `/api/auth/profile` | Update user profile | Yes |
 
 #### Examples
 
@@ -67,6 +68,38 @@ Content-Type: application/json
 }
 ```
 
+**Get current user:**
+```http
+GET /api/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Update user profile:**
+```http
+PUT /api/auth/profile
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Smith"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "user": {
+    "id": "60d5e4c82c4f7d2b9c5e8d7a",
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Smith"
+  }
+}
+```
+
 ### Account Management
 
 | Method | Endpoint | Description | Auth Required |
@@ -74,6 +107,7 @@ Content-Type: application/json
 | POST | `/api/auth/verify-email` | Verify email address | No |
 | POST | `/api/auth/forgot-password` | Request password reset | No |
 | POST | `/api/auth/reset-password` | Reset password | No |
+| POST | `/api/auth/change-password` | Change user password | Yes |
 
 ### OAuth Authentication
 

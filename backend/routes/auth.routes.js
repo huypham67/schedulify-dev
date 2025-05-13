@@ -88,6 +88,38 @@ router.post('/logout', authenticateJWT, authController.logout);
  */
 router.get('/me', authenticateJWT, authController.getCurrentUser);
 
+/**
+ * @route PUT /api/auth/profile
+ * @description Update user profile information
+ * @access Private
+ */
+router.put('/profile', authenticateJWT, authController.updateProfile);
+
+/**
+ * @route POST /api/auth/change-password
+ * @description Change user password
+ * @access Private
+ */
+router.post('/change-password', authenticateJWT, authController.changePassword);
+
+// Health check endpoint for OAuth configuration
+/**
+ * @route GET /api/auth/oauth-status
+ * @description Check OAuth configuration status
+ * @access Public
+ */
+router.get('/oauth-status', (req, res) => {
+  const status = {
+    google: !!env.GOOGLE_CLIENT_ID && !!env.GOOGLE_CLIENT_SECRET,
+    facebook: !!env.FACEBOOK_APP_ID && !!env.FACEBOOK_APP_SECRET
+  };
+  
+  return res.status(200).json({
+    success: true,
+    oauthProviders: status
+  });
+});
+
 // OAuth routes configuration
 if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
   /**

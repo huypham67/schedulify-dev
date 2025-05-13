@@ -319,6 +319,12 @@ exports.getCurrentUser = async (req, res) => {
  */
 exports.handleOAuthCallback = async (req, res) => {
   try {
+    // Check if user exists and is valid
+    if (!req.user) {
+      logger.error('OAuth callback error: No user in request');
+      return res.redirect(`${env.FRONTEND_URL}/oauth-callback?error=true&message=Authentication failed. User information not found.`);
+    }
+
     // Generate tokens after successful authentication
     const accessToken = generateAccessToken(req.user._id);
     const refreshToken = generateRefreshToken();
@@ -337,6 +343,119 @@ exports.handleOAuthCallback = async (req, res) => {
     return res.redirect(`${env.FRONTEND_URL}/oauth-callback?accessToken=${accessToken}&refreshToken=${refreshToken}`);
   } catch (error) {
     logger.error('OAuth callback error:', error);
-    return res.redirect(`${env.FRONTEND_URL}/login?error=true`);
+    // Send a more descriptive error message
+    const errorMessage = encodeURIComponent('Server error while processing authentication. Please try again later.');
+    return res.redirect(`${env.FRONTEND_URL}/oauth-callback?error=true&message=${errorMessage}`);
+  }
+};
+
+/**
+ * Update user profile
+ * @route PUT /api/auth/profile
+ */
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { firstName, lastName } = req.body;
+
+    // Validate inputs
+    if (!firstName || !lastName) {
+      return res.status(400).json({
+        success: false,
+        message: 'First name and last name are required'
+      });
+    }
+
+    try {
+      // Delegate to service layer
+      const user = await authService.updateUserProfile(userId, { firstName, lastName });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully',
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImage: user.profileImage
+        }
+      });
+    } catch (error) {
+      if (error.message === 'User not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+      throw error;
+    }
+  } catch (error) {
+    logger.error('Profile update error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during profile update'
+    });
+  }
+};
+
+/**
+ * Change user password
+ * @route POST /api/auth/change-password
+ */
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
+      });
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 8 characters long'
+      });
+    }
+
+    try {
+      // Delegate to service layer
+      await authService.changeUserPassword(userId, currentPassword, newPassword);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Password changed successfully. Please login again with your new password.'
+      });
+    } catch (error) {
+      if (error.message === 'User not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      } else if (error.message === 'Current password is incorrect') {
+        return res.status(401).json({
+          success: false,
+          message: 'Current password is incorrect'
+        });
+      } else if (error.message === 'New password must be different from current password') {
+        return res.status(400).json({
+          success: false,
+          message: 'New password must be different from current password'
+        });
+      }
+      throw error;
+    }
+  } catch (error) {
+    logger.error('Change password error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during password change'
+    });
   }
 };
