@@ -6,179 +6,200 @@
 schedulify/
 ├── backend/
 │   ├── config/
-│   │   ├── database.js       # Database configuration
-│   │   ├── passport.js       # Authentication strategies
-│   │   └── environment.js    # Environment variables
+│   │   ├── database.js       # MongoDB database configuration
+│   │   ├── passport.js       # OAuth authentication strategies
+│   │   └── environment.js    # Environment variables management
 │   │
 │   ├── controllers/
-│   │   ├── auth.controller.js        # Authentication logic
-│   │   ├── user.controller.js        # User management
-│   │   ├── social.controller.js      # Social media connections
-│   │   └── post.controller.js        # Post management
+│   │   ├── auth.controller.js        # Authentication & user management
+│   │   ├── social.controller.js      # Social media platform connections
+│   │   ├── post.controller.js        # Post creation & management
+│   │   └── media.controller.js       # Media file handling
 │   │
 │   ├── models/
-│   │   ├── user.model.js             # User schema
-│   │   ├── socialAccount.model.js    # Connected platforms
-│   │   ├── post.model.js             # Post content and metadata
-│   │   ├── media.model.js            # Media attachments
-│   │   └── schedule.model.js         # Scheduling information
+│   │   ├── user.model.js             # User authentication & profile
+│   │   ├── socialAccount.model.js    # Connected platform credentials
+│   │   ├── post.model.js             # Post content & scheduling
+│   │   └── media.model.js            # Image & video attachments
 │   │
 │   ├── routes/
 │   │   ├── auth.routes.js            # Authentication endpoints
-│   │   ├── user.routes.js            # User management endpoints
 │   │   ├── social.routes.js          # Social account endpoints
-│   │   └── post.routes.js            # Post management endpoints
+│   │   ├── post.routes.js            # Post management endpoints
+│   │   └── media.routes.js           # Media upload endpoints
 │   │
 │   ├── services/
-│   │   ├── auth.service.js           # Auth business logic
+│   │   ├── auth.service.js           # Authentication business logic
 │   │   ├── email.service.js          # Email notifications
 │   │   ├── social/
-│   │   │   ├── facebook.service.js   # Facebook API integration
-│   │   │   ├── instagram.service.js  # Instagram API integration
-│   │   │   └── common.service.js     # Shared social media logic
+│   │   │   ├── facebook.service.js   # Facebook Graph API integration
+│   │   │   └── common.service.js     # Shared social platform utilities
 │   │   │
-│   │   └── scheduler.service.js      # Post scheduling logic
+│   │   └── scheduler.service.js      # Scheduled publishing system
 │   │
 │   ├── middleware/
-│   │   ├── auth.middleware.js        # JWT verification
-│   │   ├── error.middleware.js       # Error handling
-│   │   └── validation.middleware.js  # Request validation
+│   │   ├── auth.middleware.js        # JWT validation & user authentication
+│   │   ├── error.middleware.js       # Global error handling
+│   │   └── validation.middleware.js  # Request payload validation
 │   │
 │   ├── utils/
-│   │   ├── token.utils.js            # JWT generation/validation
-│   │   ├── encryption.utils.js       # Sensitive data encryption
+│   │   ├── token.utils.js            # JWT generation & validation
+│   │   ├── encryption.utils.js       # Secure data encryption
 │   │   └── logger.utils.js           # Application logging
 │   │
 │   ├── app.js                        # Express application setup
 │   ├── server.js                     # Server entry point
-│   └── package.json                  # Dependencies
+│   └── package.json                  # Dependencies & scripts
 │
 └── frontend/
-    # Frontend structure to be determined based on chosen framework
+    # Frontend structure (separate repository)
 ```
 
-## Database Schema (PostgreSQL)
+## Database Schema (MongoDB)
 
-### Users Table
-```sql
-CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  first_name VARCHAR(100),
-  last_name VARCHAR(100),
-  profile_image VARCHAR(255),
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  last_login TIMESTAMP,
-  is_verified BOOLEAN DEFAULT FALSE,
-  verification_token VARCHAR(255),
-  reset_token VARCHAR(255),
-  reset_token_expires TIMESTAMP
-);
+### User Collection
+```js
+{
+  _id: ObjectId,
+  email: String,          // Unique, required
+  password: String,       // Hashed, required for local auth
+  firstName: String,
+  lastName: String,
+  isVerified: Boolean,    // Email verification status
+  verificationToken: String,
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  oauth: {                // For OAuth-based authentication
+    provider: String,     // 'facebook', 'google'
+    id: String           // Provider's user ID
+  },
+  lastLogin: Date,
+  refreshTokens: [{       // Active refresh tokens
+    token: String,
+    expires: Date,
+    userAgent: String,
+    ip: String
+  }],
+  createdAt: Date,
+  updatedAt: Date
+}
 ```
 
-### SocialAccounts Table
-```sql
-CREATE TABLE social_accounts (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  platform VARCHAR(50) NOT NULL,
-  platform_user_id VARCHAR(255) NOT NULL,
-  access_token TEXT NOT NULL,
-  refresh_token TEXT,
-  token_expires_at TIMESTAMP,
-  account_name VARCHAR(255),
-  account_type VARCHAR(50),
-  profile_url VARCHAR(255),
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(user_id, platform, platform_user_id)
-);
+### SocialAccount Collection
+```js
+{
+  _id: ObjectId,
+  user: ObjectId,         // Reference to User
+  platform: String,       // 'facebook', 'instagram'
+  platformId: String,     // Platform's internal ID
+  platformUserId: String, // User ID on the platform
+  accessToken: String,    // Platform OAuth token (encrypted)
+  refreshToken: String,   // For token refresh (if applicable)
+  tokenExpiry: Date,
+  accountName: String,    // Display name of account
+  accountType: String,    // 'page', 'profile', etc.
+  profileUrl: String,
+  profileImage: String,
+  isActive: Boolean,      // Connection status
+  meta: Object,           // Platform-specific details
+  createdAt: Date,
+  updatedAt: Date
+}
 ```
 
-### Posts Table
-```sql
-CREATE TABLE posts (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  content TEXT,
-  link VARCHAR(2048),
-  scheduled_at TIMESTAMP,
-  published_at TIMESTAMP,
-  status VARCHAR(50) DEFAULT 'draft',
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+### Post Collection
+```js
+{
+  _id: ObjectId,
+  user: ObjectId,         // Reference to User
+  content: String,        // Post text content
+  link: String,           // Optional URL to include
+  scheduledAt: Date,      // When post should publish
+  publishedAt: Date,      // When post was actually published
+  status: String,         // 'draft', 'scheduled', 'published', 'failed'
+  platforms: [            // Target platforms
+    {
+      socialAccount: ObjectId,  // Reference to SocialAccount
+      platformPostId: String,   // ID of post on platform (after publishing)
+      status: String,           // 'pending', 'published', 'failed'
+      publishedAt: Date,
+      errorMessage: String      // Error details if failed
+    }
+  ],
+  createdAt: Date,
+  updatedAt: Date
+}
 ```
 
-### PostPlatforms Table
-```sql
-CREATE TABLE post_platforms (
-  id SERIAL PRIMARY KEY,
-  post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
-  social_account_id INTEGER REFERENCES social_accounts(id) ON DELETE CASCADE,
-  platform_post_id VARCHAR(255),
-  status VARCHAR(50) DEFAULT 'pending',
-  error_message TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### Media Table
-```sql
-CREATE TABLE media (
-  id SERIAL PRIMARY KEY,
-  post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL,
-  url VARCHAR(2048) NOT NULL,
-  alt_text VARCHAR(255),
-  order_index INTEGER DEFAULT 0,
-  created_at TIMESTAMP DEFAULT NOW()
-);
+### Media Collection
+```js
+{
+  _id: ObjectId,
+  post: ObjectId,         // Reference to Post
+  type: String,           // 'image', 'video'
+  url: String,            // Path to stored file
+  altText: String,        // Accessibility description
+  orderIndex: Number,     // For ordering multiple media
+  createdAt: Date
+}
 ```
 
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - User registration
+- `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
 - `POST /api/auth/refresh` - Refresh access token
-- `POST /api/auth/verify-email` - Email verification
-- `POST /api/auth/forgot-password` - Password reset request
-- `POST /api/auth/reset-password` - Password reset
+- `GET /api/auth/me` - Get current user profile
+- `POST /api/auth/verify-email` - Verify email address
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Reset password with token
+- `GET /api/auth/google` - Initiate Google OAuth
+- `GET /api/auth/facebook` - Initiate Facebook OAuth
 
-### Social Accounts
+### Social Media Accounts
 - `GET /api/social/accounts` - List connected accounts
-- `POST /api/social/connect/:platform` - Connect platform
-- `DELETE /api/social/disconnect/:id` - Disconnect platform
-- `GET /api/social/authorize/:platform` - OAuth redirect
+- `GET /api/social/connect/facebook` - Connect Facebook account
+- `GET /api/social/facebook/callback` - Facebook OAuth callback
+- `POST /api/social/connect/facebook/callback/complete` - Complete Facebook connection
+- `DELETE /api/social/accounts/:accountId` - Disconnect account
 
 ### Posts
-- `GET /api/posts` - List user's posts
+- `GET /api/posts` - List user's posts with filtering/pagination
 - `POST /api/posts` - Create new post
 - `GET /api/posts/:id` - Get post details
 - `PUT /api/posts/:id` - Update post
 - `DELETE /api/posts/:id` - Delete post
-- `POST /api/posts/:id/schedule` - Schedule post
+- `POST /api/posts/:id/schedule` - Schedule post for publishing
 - `POST /api/posts/:id/publish` - Publish post immediately
 
-## Implementation Priority
+### Media
+- `POST /api/media/upload` - Upload media file
+- `DELETE /api/media/:id` - Delete media file
+- `GET /api/posts/:postId/media` - Get media for a post
 
-1. Authentication System
-   - User registration/login
-   - JWT token management
-   - Password reset flow
+## Implementation Alignment with Business Requirements
 
-2. Social Media Connection
-   - OAuth integration for Facebook
-   - Account management
-   - Token storage and refresh
+### Account Management
+- Self-service registration with email verification ✅
+- OAuth integration for streamlined signup ✅
+- JWT-based authentication for secure access ✅
 
-3. Post Management
-   - Post creation and storage
-   - Scheduling mechanism
-   - Basic media handling
+### Social Media Integration
+- Facebook Graph API integration for pages ✅
+- Secure OAuth connection with token management ✅
+- Platform account selection and management ✅
 
-This structure provides a solid foundation for building your MVP while allowing for future expansion to include additional features like the AI content assistant, marketplace, analytics, and payment systems. 
+### Content Management
+- Post creation with text, link and media support ✅
+- Multi-platform scheduling capabilities ✅
+- Draft saving and content editing ✅
+
+### Publishing System
+- Automated publishing via scheduler service ✅
+- Immediate publishing option ✅
+- Publication status tracking ✅
+- Error handling for failed publications ✅
+
+This architecture fully supports the MVP requirements while providing a foundation for future expansion to include additional platforms and advanced features. 

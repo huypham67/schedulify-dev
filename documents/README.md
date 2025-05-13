@@ -1,68 +1,48 @@
 # Schedulify Documentation
 
-Welcome to the official Schedulify documentation - a comprehensive guide for developers working on this social media management platform.
+This is the official documentation for Schedulify - a social media management platform that enables scheduling and publishing of content across multiple social networks.
 
 ## About Schedulify
 
-Schedulify is a social media management platform that enables users to:
-- Schedule and publish posts across multiple social media platforms
-- Connect social media accounts (Facebook, Instagram)
-- Manage content with support for text, images, and videos
+Schedulify helps users:
+- Create and manage social media content from a centralized dashboard
+- Connect to Facebook (pages and business accounts)
+- Schedule posts for future publication
+- Track post status and publication results
 
-## Documentation Structure
+## Documentation Overview
 
-This documentation is organized into the following key sections:
+### Business Documentation
+- [**Business Requirements**](BUSINESS-REQUIREMENTS.md) - Domain logic and business needs
+- [**MVP Roadmap**](MVP-ROADMAP.md) - Core features and implementation timeline
 
-### Business Understanding
-- [**Business Requirements**](BUSINESS-REQUIREMENTS.md) - Comprehensive overview of business needs and domain logic
-- [**MVP Roadmap**](MVP-ROADMAP.md) - Development plan for MVP features and release timeline
-
-### Core Implementation Guides
-- [**Project Structure**](PROJECT-STRUCTURE.md) - Overall architecture and organization
-- [**API Endpoints**](API-ENDPOINTS.md) - Complete list of available endpoints
-- [**Authentication System**](AUTH-IMPLEMENTATION.md) - JWT-based authentication implementation
-
-### Testing and Development
-- [**Testing Guide**](TESTING-GUIDE.md) - Guide for testing various API endpoints
+### Technical Documentation
+- [**Project Structure**](PROJECT-STRUCTURE.md) - Architecture and codebase organization
+- [**API Endpoints**](API-ENDPOINTS.md) - Available API endpoints with examples
+- [**Authentication System**](AUTH-IMPLEMENTATION.md) - JWT authentication implementation
+- [**Testing Guide**](TESTING-GUIDE.md) - Step-by-step API testing with Postman
 
 ## Getting Started
 
 ### Backend Setup
 1. Navigate to the `backend` directory
-2. Copy `.env.backup` to `.env` and configure environment variables
+2. Copy `env.backup` to `.env` and configure environment variables
 3. Install dependencies: `npm install`
 4. Start development server: `npm run dev`
 
-### Project Structure
-
-```
-schedulify/
-├── backend/           # Node.js/Express backend
-│   ├── config/        # Configuration (DB, env, auth)
-│   ├── controllers/   # Request handlers
-│   ├── models/        # MongoDB schemas
-│   ├── routes/        # API endpoint definitions
-│   ├── services/      # Business logic
-│   ├── middleware/    # Express middleware
-│   └── utils/         # Helper functions
-└── frontend/          # React frontend (separate repository)
-```
-
 ## Technology Stack
 
-### Backend
-- Node.js + Express
-- MongoDB with Mongoose
-- JWT authentication
-- Passport.js for OAuth
-- Multer for file uploads
+- **Backend**: Node.js + Express, MongoDB with Mongoose
+- **Authentication**: JWT tokens, Passport.js for OAuth
+- **Media Handling**: Multer for file uploads
+- **Scheduled Tasks**: Node-cron for post publishing
 
-## Development Status
+## Current Implementation Status
 
-Current implemented features:
-- Complete authentication system (local + OAuth)
-- Social media account connections
-- Post creation, scheduling and management
-- Media file uploads
+- ✅ User authentication (local + OAuth)
+- ✅ Facebook page connection
+- ✅ Post creation with media support
+- ✅ Post scheduling and publishing
+- ✅ Publication status tracking
 
-For detailed implementation information, refer to the specific guides linked above. 
+Refer to the specific documentation files for detailed implementation information. 

@@ -18,8 +18,7 @@ const router = express.Router();
 router.use([
   '/accounts',
   '/connect/facebook',
-  '/connect/facebook/callback/complete',
-  '/disconnect'
+  '/connect/facebook/callback/complete'
 ], authenticateJWT);
 
 /**
@@ -55,10 +54,10 @@ router.post(
 );
 
 /**
- * @route DELETE /api/social/disconnect/:accountId
+ * @route DELETE /api/social/accounts/:accountId
  * @description Disconnect a social account
  * @access Private
  */
-router.delete('/disconnect/:accountId', socialController.disconnectAccount);
+router.delete('/accounts/:accountId', authenticateJWT, socialController.disconnectAccount);
 
 module.exports = router;

@@ -1,234 +1,468 @@
-# API Testing Guide
+# Schedulify API Testing Guide with Postman
 
-This document provides instructions for testing the Schedulify API endpoints.
+This document provides a comprehensive guide for testing the Schedulify API using Postman. It follows a complete user flow that validates core business requirements from authentication to publishing social media content.
 
-## Setup
+## Prerequisites
 
-1. **Start the Application**:
-   ```bash
-   cd backend
-   npm install
-   npm run dev
-   ```
+1. [Postman](https://www.postman.com/downloads/) installed on your system
+2. Schedulify backend server running (`npm run dev` in the backend directory)
+3. MongoDB running locally or connection to a remote MongoDB instance
+4. Facebook Developer account (for social media integration tests)
 
-2. **Create Test User**:
-   ```bash
-   node scripts/create-test-user.js
-   ```
-   This creates a user with the following credentials:
-   - Email: test@example.com
-   - Password: Password123
+## Setup Postman Environment
 
-## Authentication Testing
+1. Create a new environment in Postman named "Schedulify"
+2. Add the following variables:
+   - `base_url`: `http://localhost:5000` (or your server URL)
+   - `access_token`: (leave empty, will be populated during testing)
+   - `refresh_token`: (leave empty, will be populated during testing)
+   - `userId`: (leave empty, will be populated during testing)
+   - `postId`: (leave empty, will be populated during testing)
+   - `socialAccountId`: (leave empty, will be populated during testing)
+   - `mediaId`: (leave empty, will be populated during testing)
 
-### Getting an Access Token
+## Comprehensive Testing Flow
 
-1. Login using the test account:
-   ```http
-   POST http://localhost:5000/api/auth/login
-   Content-Type: application/json
+### Flow 1: User Authentication & Management
 
+#### Step 1: Register a New User
+
+1. Create a new request:
+   - Method: `POST`
+   - URL: `{{base_url}}/api/auth/register`
+   - Body (JSON):
+     ```json
+     {
+       "email": "test@example.com",
+       "password": "Password123!",
+       "firstName": "Test",
+       "lastName": "User"
+     }
+     ```
+2. Send the request
+3. Expected response (200 OK):
+   ```json
    {
-     "email": "test@example.com",
-     "password": "Password123"
+     "success": true,
+     "message": "User registered successfully"
    }
    ```
 
-2. Save the `accessToken` from the response for use in subsequent requests.
-3. All authenticated endpoints require the Authorization header:
+#### Step 2: Verify Email (Optional)
+
+In a production environment, you would need to click the verification link sent to your email. For testing, you can either:
+- Manually mark the user as verified in the database, or
+- Create a route that accepts a verification token directly
+
+#### Step 3: Login with User Credentials
+
+1. Create a new request:
+   - Method: `POST`
+   - URL: `{{base_url}}/api/auth/login`
+   - Body (JSON):
+     ```json
+     {
+       "email": "test@example.com",
+       "password": "Password123!"
+     }
+     ```
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "accessToken": "eyJhbGciOiJIUzI1...",
+     "refreshToken": "eyJhbGciOiJIUzI1...",
+     "user": {
+       "_id": "...",
+       "email": "test@example.com",
+       "firstName": "Test",
+       "lastName": "User"
+     }
+   }
    ```
-   Authorization: Bearer YOUR_ACCESS_TOKEN
-   ```
+4. Save the tokens and user ID as environment variables:
+   - Right-click → Set to environment variable:
+     - `accessToken` → `access_token`
+     - `refreshToken` → `refresh_token`
+     - `user._id` → `userId`
 
-### Testing Auth Endpoints
+#### Step 4: Get Current User Profile
 
-#### Register a New User
-```http
-POST http://localhost:5000/api/auth/register
-Content-Type: application/json
-
-{
-  "email": "newuser@example.com",
-  "password": "SecurePass123",
-  "firstName": "New",
-  "lastName": "User"
-}
-```
-
-#### Verify Email
-```http
-POST http://localhost:5000/api/auth/verify-email
-Content-Type: application/json
-
-{
-  "token": "verification_token_from_email"
-}
-```
-
-#### Request Password Reset
-```http
-POST http://localhost:5000/api/auth/forgot-password
-Content-Type: application/json
-
-{
-  "email": "test@example.com"
-}
-```
-
-#### Reset Password
-```http
-POST http://localhost:5000/api/auth/reset-password
-Content-Type: application/json
-
-{
-  "token": "reset_token_from_email",
-  "password": "NewPassword123"
-}
-```
-
-#### Get Current User
-```http
-GET http://localhost:5000/api/auth/me
-Authorization: Bearer YOUR_ACCESS_TOKEN
-```
-
-## Social Media Integration Testing
-
-### Getting Connected Accounts
-
-```http
-GET http://localhost:5000/api/social/accounts
-Authorization: Bearer YOUR_ACCESS_TOKEN
-```
-
-### Connecting to Facebook
-
-1. Initiate Facebook OAuth flow:
-   ```http
-   GET http://localhost:5000/api/social/connect/facebook
-   Authorization: Bearer YOUR_ACCESS_TOKEN
+1. Create a new request:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/auth/me`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "user": {
+       "_id": "...",
+       "email": "test@example.com",
+       "firstName": "Test",
+       "lastName": "User",
+       "createdAt": "..."
+     }
+   }
    ```
 
-2. You will be redirected to Facebook for authentication
-3. After approval, you'll be redirected back to the application
+#### Step 5: Test Token Refresh (Optional)
 
-### Disconnecting an Account
+1. Create a new request:
+   - Method: `POST`
+   - URL: `{{base_url}}/api/auth/refresh`
+   - Body (JSON):
+     ```json
+     {
+       "refreshToken": "{{refresh_token}}"
+     }
+     ```
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "accessToken": "eyJhbGciOiJIUzI1...",
+     "refreshToken": "eyJhbGciOiJIUzI1..."
+   }
+   ```
+4. Update the tokens in environment variables
 
-```http
-DELETE http://localhost:5000/api/social/accounts/ACCOUNT_ID
-Authorization: Bearer YOUR_ACCESS_TOKEN
-```
+### Flow 2: Social Media Integration
 
-## Post Management Testing
+#### Step 6: Connect to Facebook (Manual Process)
 
-### Creating a Post
+> **Note**: This step requires browser interaction as Postman cannot handle the OAuth UI flow.
 
-```http
-POST http://localhost:5000/api/posts
-Authorization: Bearer YOUR_ACCESS_TOKEN
-Content-Type: application/json
+1. Open a browser and visit: `{{base_url}}/api/social/connect/facebook`
+   - You need to be logged in to your application first
+   - You will be redirected to Facebook for authorization
+   - After authorizing, Facebook will redirect back to your application
+   - Your backend should complete the connection process
 
-{
-  "content": "This is a test post",
-  "link": "https://example.com",
-  "scheduledAt": "2023-07-15T10:00:00.000Z",
-  "platforms": ["SOCIAL_ACCOUNT_ID"]
-}
-```
+2. After connecting, note the `socialAccountId` from the response or UI
 
-### Getting User Posts
+#### Step 7: Get Connected Social Accounts
 
-```http
-GET http://localhost:5000/api/posts
-Authorization: Bearer YOUR_ACCESS_TOKEN
-```
+1. Create a new request:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/social/accounts`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "data": [
+       {
+         "_id": "...",
+         "platform": "facebook",
+         "platformUserId": "...",
+         "accountName": "Your Facebook Page",
+         "accountType": "page",
+         "isActive": true
+       }
+     ]
+   }
+   ```
+4. Save the social account ID:
+   - Right-click → Set to environment variable:
+     - `data[0]._id` → `socialAccountId`
 
-With filtering:
-```http
-GET http://localhost:5000/api/posts?status=scheduled&page=1&limit=10
-Authorization: Bearer YOUR_ACCESS_TOKEN
-```
+### Flow 3: Content Management & Publishing
 
-### Getting a Specific Post
+#### Step 8: Upload Media for Post
 
-```http
-GET http://localhost:5000/api/posts/POST_ID
-Authorization: Bearer YOUR_ACCESS_TOKEN
-```
+1. Create a new request:
+   - Method: `POST`
+   - URL: `{{base_url}}/api/media/upload`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+   - Body (form-data):
+     - Key: `file` (file), Value: Select an image file
+     - Key: `type`, Value: `image`
+     - Key: `altText`, Value: `Test image description`
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "data": {
+       "_id": "...",
+       "url": "http://localhost:5000/uploads/...",
+       "type": "image",
+       "altText": "Test image description"
+     }
+   }
+   ```
+4. Save the media ID:
+   - Right-click → Set to environment variable:
+     - `data._id` → `mediaId`
 
-### Updating a Post
+#### Step 9: Create a New Post
 
-```http
-PUT http://localhost:5000/api/posts/POST_ID
-Authorization: Bearer YOUR_ACCESS_TOKEN
-Content-Type: application/json
+1. Create a new request:
+   - Method: `POST`
+   - URL: `{{base_url}}/api/posts`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+   - Body (JSON):
+     ```json
+     {
+       "content": "This is a test post from Postman! #testing",
+       "link": "https://example.com",
+       "media": ["{{mediaId}}"],
+       "platforms": [
+         {
+           "socialAccount": "{{socialAccountId}}"
+         }
+       ]
+     }
+     ```
+2. Send the request
+3. Expected response (201 Created):
+   ```json
+   {
+     "success": true,
+     "data": {
+       "_id": "...",
+       "content": "This is a test post from Postman! #testing",
+       "link": "https://example.com",
+       "status": "draft",
+       "platforms": [
+         {
+           "socialAccount": "{{socialAccountId}}",
+           "status": "pending"
+         }
+       ],
+       "user": "{{userId}}"
+     }
+   }
+   ```
+4. Save the post ID:
+   - Right-click → Set to environment variable:
+     - `data._id` → `postId`
 
-{
-  "content": "Updated post content",
-  "link": "https://example.com/updated",
-  "scheduledAt": "2023-07-16T10:00:00.000Z"
-}
-```
+#### Step 10: Schedule the Post
 
-### Scheduling a Post
+1. Create a new request:
+   - Method: `POST`
+   - URL: `{{base_url}}/api/posts/{{postId}}/schedule`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+   - Body (JSON):
+     ```json
+     {
+       "scheduledAt": "2023-12-31T12:00:00.000Z"
+     }
+     ```
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "data": {
+       "_id": "{{postId}}",
+       "status": "scheduled",
+       "scheduledAt": "2023-12-31T12:00:00.000Z"
+     }
+   }
+   ```
 
-```http
-POST http://localhost:5000/api/posts/POST_ID/schedule
-Authorization: Bearer YOUR_ACCESS_TOKEN
-Content-Type: application/json
+#### Step 11: Get Post Details
 
-{
-  "scheduledAt": "2023-07-16T15:30:00.000Z"
-}
-```
+1. Create a new request:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/posts/{{postId}}`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+2. Send the request
+3. Expected response (200 OK) should include the post with media and platform information
 
-### Publishing a Post Immediately
+#### Step 12: Update Post Content (Optional)
 
-```http
-POST http://localhost:5000/api/posts/POST_ID/publish
-Authorization: Bearer YOUR_ACCESS_TOKEN
-```
+1. Create a new request:
+   - Method: `PUT`
+   - URL: `{{base_url}}/api/posts/{{postId}}`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+   - Body (JSON):
+     ```json
+     {
+       "content": "Updated post content with new text"
+     }
+     ```
+2. Send the request
+3. Expected response (200 OK) with updated post details
 
-### Deleting a Post
+#### Step 13: Publish Post Immediately (Alternative to Scheduling)
 
-```http
-DELETE http://localhost:5000/api/posts/POST_ID
-Authorization: Bearer YOUR_ACCESS_TOKEN
-```
+1. Create a new request:
+   - Method: `POST`
+   - URL: `{{base_url}}/api/posts/{{postId}}/publish`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "data": {
+       "_id": "{{postId}}",
+       "status": "published",
+       "publishedAt": "..."
+     }
+   }
+   ```
 
-## Media Upload Testing
+### Flow 4: Post Listing and Filtering
 
-### Uploading Media Files
+#### Step 14: Get All Posts
 
-```http
-POST http://localhost:5000/api/media/upload
-Authorization: Bearer YOUR_ACCESS_TOKEN
-Content-Type: multipart/form-data
+1. Create a new request:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/posts`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+2. Send the request
+3. Expected response (200 OK) with a list of posts and pagination data
 
-// Include files using form-data
-```
+#### Step 15: Filter Posts by Status
 
-### Deleting Media
+1. Create a new request:
+   - Method: `GET`
+   - URL: `{{base_url}}/api/posts?status=published`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+2. Send the request
+3. Expected response (200 OK) with only published posts
 
-```http
-DELETE http://localhost:5000/api/media/MEDIA_ID
-Authorization: Bearer YOUR_ACCESS_TOKEN
-```
+### Flow 5: Cleanup (Optional)
 
-## Testing with Postman
+#### Step 16: Delete the Post
 
-1. Import the Postman collection from `backend/scripts/schedulify-api.postman_collection.json`
-2. Set up an environment with variable `baseUrl` set to `http://localhost:5000`
-3. Create a variable `accessToken` and update it after login
-4. Use the collection to test all endpoints
+1. Create a new request:
+   - Method: `DELETE`
+   - URL: `{{base_url}}/api/posts/{{postId}}`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "message": "Post deleted successfully"
+   }
+   ```
 
-## Automated Testing
+#### Step 17: Disconnect Social Account
 
-Run the automated test suite with:
+1. Create a new request:
+   - Method: `DELETE`
+   - URL: `{{base_url}}/api/social/accounts/{{socialAccountId}}`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "message": "Social account disconnected successfully"
+   }
+   ```
+
+#### Step 18: Logout
+
+1. Create a new request:
+   - Method: `POST`
+   - URL: `{{base_url}}/api/auth/logout`
+   - Headers:
+     - `Authorization`: `Bearer {{access_token}}`
+   - Body (JSON):
+     ```json
+     {
+       "refreshToken": "{{refresh_token}}"
+     }
+     ```
+2. Send the request
+3. Expected response (200 OK):
+   ```json
+   {
+     "success": true,
+     "message": "Logged out successfully"
+   }
+   ```
+
+## Business Requirements Coverage
+
+This testing flow validates the following key business requirements:
+
+1. **Account Management**
+   - User registration and authentication ✅
+   - JWT-based security ✅
+   - Profile management ✅
+
+2. **Social Media Integration**
+   - Platform connection via OAuth ✅
+   - Platform account management ✅
+   - Token storage and security ✅
+
+3. **Content Management**
+   - Post creation with text and media ✅
+   - Draft creation and editing ✅
+   - Platform-specific publishing ✅
+
+4. **Publishing System**
+   - Scheduled publishing ✅
+   - Immediate publishing ✅
+   - Status tracking ✅
+
+## Creating a Postman Collection
+
+1. Create a new collection named "Schedulify API Tests"
+2. Add all the requests from the steps above to the collection
+3. Organize them into folders by flow
+4. Save the collection for reuse
+5. Export the collection and environment for sharing
+
+## Troubleshooting Common Issues
+
+### Authentication Problems
+- Ensure your tokens are valid and not expired
+- Check if the token format in Authorization header is correct (`Bearer <token>`)
+- Verify the user exists and is verified if required
+
+### Social Integration Issues
+- Check that Facebook App settings are correctly configured
+- Verify callback URLs match your application configuration
+- Ensure proper scopes/permissions are requested
+
+### Media Upload Problems
+- Check file size limits (typically 10MB max)
+- Verify supported file types (images, videos)
+- Ensure the uploads directory exists and is writable
+
+### Post Publishing Issues
+- Verify the social account is still connected and tokens valid
+- Check for platform-specific content restrictions
+- Look for detailed error messages in the post platform status
+
+## Automated Testing (Advanced)
+
+For automated testing with Newman (Postman CLI):
 
 ```bash
-cd backend
-npm test
+# Install Newman
+npm install -g newman
+
+# Run collection
+newman run Schedulify.postman_collection.json -e Schedulify.postman_environment.json
 ```
 
-This will run all unit and integration tests for the API endpoints. 
+## Contact
+
+If you encounter persistent issues, please contact the development team or open an issue on GitHub. 

@@ -3,6 +3,7 @@ require('dotenv').config();
 module.exports = {
   PORT: process.env.PORT || 5000,
   NODE_ENV: process.env.NODE_ENV || 'development',
+  API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:5000',
   
   JWT_SECRET: process.env.JWT_SECRET || 'schedulify_jwt_secret',
   JWT_ACCESS_EXPIRATION: process.env.JWT_ACCESS_EXPIRATION || '15m',

@@ -89,12 +89,12 @@ class SchedulerService {
           
           // Publish based on platform type
           if (accountType === 'facebook') {
-            result = await socialServices.facebook.publishPost(
+            result = await socialServices.facebook.postToFacebook(
               platform.socialAccount._id,
               postData
             );
           } else if (accountType === 'instagram') {
-            result = await socialServices.facebook.publishToInstagram(
+            result = await socialServices.facebook.postToInstagram(
               platform.socialAccount._id,
               postData
             );

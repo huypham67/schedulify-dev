@@ -5,6 +5,9 @@ const logger = require('../utils/logger.utils');
 const env = require('../config/environment');
 const { validateObjectId } = require('../utils/validation.utils');
 
+// Define API base URL if not in environment
+const API_BASE_URL = env.API_BASE_URL || `http://localhost:${env.PORT}`;
+
 /**
  * Get user's connected social accounts
  * @route GET /api/social/accounts
@@ -39,7 +42,7 @@ exports.initFacebookConnect = async (req, res) => {
     // Note: In production, store state in session/database with expiry to verify on callback
     
     // Generate Facebook OAuth URL
-    const redirectUri = `${env.API_BASE_URL}/api/social/facebook/callback`;
+    const redirectUri = `${API_BASE_URL}/api/social/facebook/callback`;
     const fbLoginUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${env.FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish`;
     
     return res.status(200).json({
@@ -77,20 +80,27 @@ exports.handleFacebookCallback = async (req, res) => {
     }
     
     // Exchange code for access token
-    const redirectUri = `${env.API_BASE_URL}/api/social/facebook/callback`;
-    const tokenResponse = await axios.get('https://graph.facebook.com/v18.0/oauth/access_token', {
-      params: {
-        client_id: env.FACEBOOK_APP_ID,
-        client_secret: env.FACEBOOK_APP_SECRET,
-        redirect_uri: redirectUri,
-        code
-      }
-    });
+    const redirectUri = `${API_BASE_URL}/api/social/facebook/callback`;
     
-    const accessToken = tokenResponse.data.access_token;
-    
-    // Redirect to frontend with token
-    return res.redirect(`${env.FRONTEND_URL}/social/connect?token=${accessToken}`);
+    // Fix the Facebook API request format to properly include parameters
+    try {
+      const tokenResponse = await axios.get('https://graph.facebook.com/v18.0/oauth/access_token', {
+        params: {
+          client_id: env.FACEBOOK_APP_ID,
+          client_secret: env.FACEBOOK_APP_SECRET,
+          redirect_uri: redirectUri,
+          code: code
+        }
+      });
+      
+      const accessToken = tokenResponse.data.access_token;
+      
+      // Redirect to frontend with token
+      return res.redirect(`${env.FRONTEND_URL}/social/connect?token=${accessToken}`);
+    } catch (apiError) {
+      logger.error('Facebook API Error:', apiError.response?.data || apiError.message);
+      return res.redirect(`${env.FRONTEND_URL}/social/connect?error=token`);
+    }
   } catch (error) {
     logger.error('Error handling Facebook callback:', error);
     return res.redirect(`${env.FRONTEND_URL}/social/connect?error=true`);
@@ -158,7 +168,7 @@ exports.connectFacebookAccounts = async (req, res) => {
 
 /**
  * Disconnect social account
- * @route DELETE /api/social/disconnect/:accountId
+ * @route DELETE /api/social/accounts/:accountId
  */
 exports.disconnectAccount = async (req, res) => {
   try {

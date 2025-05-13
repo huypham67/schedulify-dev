@@ -1,6 +1,6 @@
 # Authentication System
 
-This document provides an overview of the JWT-based authentication system implemented in Schedulify.
+This document provides a detailed overview of the JWT-based authentication system implemented in Schedulify.
 
 ## Features
 
@@ -12,12 +12,56 @@ This document provides an overview of the JWT-based authentication system implem
 
 ## Database Model
 
-The User model includes:
-- Basic user information (name, email)
-- Password (hashed with bcrypt)
-- Email verification status
-- OAuth provider information
-- Refresh token management
+The User model (`models/user.model.js`) includes:
+
+```js
+{
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
+  password: {
+    type: String,
+    required: function() {
+      return !this.oauth; // Password only required for local auth
+    }
+  },
+  firstName: {
+    type: String,
+    trim: true
+  },
+  lastName: {
+    type: String,
+    trim: true
+  },
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: String,
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  oauth: {
+    provider: {
+      type: String,
+      enum: ['google', 'facebook']
+    },
+    id: String
+  },
+  lastLogin: Date,
+  refreshTokens: [{
+    token: String,
+    expires: Date,
+    userAgent: String,
+    ip: String
+  }],
+  createdAt: Date,
+  updatedAt: Date
+}
+```
 
 ## Authentication Endpoints
 
@@ -38,41 +82,71 @@ The User model includes:
 
 ## Token Management
 
-- **Access Token**: Short-lived JWT (15-30 minutes) for API access
-- **Refresh Token**: Long-lived token (7 days) stored in database to issue new access tokens
-- Token rotation on each refresh for enhanced security
+- **Access Token**: Short-lived JWT (30 minutes) containing user ID and roles
+- **Refresh Token**: Long-lived token (7 days) stored in the database and used to issue new access tokens
+- Token rotation: Each time a refresh token is used, a new one is issued and the old one is invalidated
 
 ## Implementation Details
 
 ### Authentication Flow
 
-1. User registers and receives verification email
-2. After verifying email, user can log in
-3. Login provides access token (for API calls) and refresh token
-4. When access token expires, refresh token is used to get a new one
-5. Logout invalidates the refresh token
+#### Local Authentication
+1. User registers with email, password, and profile details
+2. A verification email is sent to the user's email address
+3. After verifying their email, the user can log in
+4. On login, the system issues an access token and refresh token
+5. The access token is used to authorize all protected API requests
+6. When the access token expires, the refresh token can be used to obtain a new access token
 
-### OAuth Flow
-
-1. User initiates OAuth (Google/Facebook)
-2. User is redirected to provider for authentication
-3. Provider redirects back to our callback URL
-4. System creates/updates user and issues tokens
-5. User is redirected to frontend with tokens
+#### OAuth Flow
+1. User initiates OAuth (Google/Facebook) by visiting `/api/auth/google` or `/api/auth/facebook`
+2. User is redirected to the provider's authentication page
+3. After successful authentication, the provider redirects back to our callback URL
+4. The system creates or updates the user record based on OAuth profile data
+5. The user is authenticated and receives tokens similar to local authentication
 
 ### Security Measures
 
-- Password hashing with bcrypt
-- CSRF protection
-- Rate limiting on auth endpoints
-- Secure HTTP-only cookies option for production
-- JWT token validation and expiration
-- Email verification prevents fake accounts
+- Password hashing using bcrypt with appropriate salt rounds
+- CSRF protection on authentication endpoints
+- Rate limiting to prevent brute force attacks
+- Refresh token rotation to mitigate token theft
+- HTTPOnly cookies option for production environments
+- Secure validation of JWT tokens and proper expiration settings
+- Email verification to prevent account spoofing
 
 ## Code Structure
 
-- **Controllers**: `auth.controller.js` - handles HTTP requests
-- **Services**: `auth.service.js` - contains business logic
-- **Routes**: `auth.routes.js` - defines API endpoints
-- **Middleware**: `auth.middleware.js` - JWT verification
-- **Utils**: `token.utils.js` - JWT functions
+- `controllers/auth.controller.js` - Handles HTTP requests for authentication
+- `services/auth.service.js` - Contains authentication business logic
+- `middleware/auth.middleware.js` - JWT verification middleware
+- `utils/token.utils.js` - JWT generation and validation functions
+- `config/passport.js` - OAuth strategy configuration
+
+## Example: JWT Verification Middleware
+
+```js
+const authenticateJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Authentication required' 
+    });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = { id: decoded.sub };
+    next();
+  } catch (error) {
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Invalid or expired token' 
+    });
+  }
+};
+```

@@ -59,7 +59,7 @@ Content-Type: application/json
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "a1b2c3d4e5f6...",
   "user": {
-    "id": "60d5e4c82c4f7d2b9c5e8d7a",
+    "_id": "60d5e4c82c4f7d2b9c5e8d7a",
     "email": "user@example.com",
     "firstName": "John",
     "lastName": "Doe"
@@ -91,14 +91,15 @@ Content-Type: application/json
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|--------------|
 | GET | `/api/social/accounts` | Get connected accounts | Yes |
-| DELETE | `/api/social/accounts/:id` | Disconnect account | Yes |
+| DELETE | `/api/social/accounts/:accountId` | Disconnect account | Yes |
 
 ### Platform Connection
 
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|--------------|
 | GET | `/api/social/connect/facebook` | Connect Facebook | Yes |
-| GET | `/api/social/connect/facebook/callback` | Facebook OAuth callback | Yes |
+| GET | `/api/social/facebook/callback` | Facebook OAuth callback | No |
+| POST | `/api/social/connect/facebook/callback/complete` | Complete Facebook connection | Yes |
 
 #### Examples
 
@@ -150,6 +151,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 |--------|----------|-------------|--------------|
 | POST | `/api/media/upload` | Upload media files | Yes |
 | DELETE | `/api/media/:id` | Delete a media file | Yes |
+| GET | `/api/posts/:postId/media` | Get media for a post | Yes |
 
 #### Examples
 
@@ -162,8 +164,11 @@ Content-Type: application/json
 {
   "content": "Check out our new product launch!",
   "link": "https://example.com/products",
-  "scheduledAt": "2023-07-15T14:30:00.000Z",
-  "platforms": ["60d5e4c82c4f7d2b9c5e8d7a"] // social account IDs
+  "platforms": [
+    {
+      "socialAccount": "60d5e4c82c4f7d2b9c5e8d7a"
+    }
+  ]
 }
 ```
 
@@ -175,9 +180,37 @@ Content-Type: application/json
     "_id": "60d5e4c82c4f7d2b9c5e8d7b",
     "content": "Check out our new product launch!",
     "link": "https://example.com/products",
-    "scheduledAt": "2023-07-15T14:30:00.000Z",
+    "status": "draft",
+    "platforms": [
+      {
+        "socialAccount": "60d5e4c82c4f7d2b9c5e8d7a",
+        "status": "pending"
+      }
+    ],
+    "user": "60d5e4c82c4f7d2b9c5e8d7c"
+  }
+}
+```
+
+**Schedule a post:**
+```http
+POST /api/posts/60d5e4c82c4f7d2b9c5e8d7b/schedule
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "scheduledAt": "2023-12-31T12:00:00.000Z"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "60d5e4c82c4f7d2b9c5e8d7b",
     "status": "scheduled",
-    "platforms": ["60d5e4c82c4f7d2b9c5e8d7a"]
+    "scheduledAt": "2023-12-31T12:00:00.000Z"
   }
 }
 ```
